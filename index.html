@@ -7,187 +7,185 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
     <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+        }
+        .score-info {
+            width: 40%;
+            margin-right: 20px;
+        }
+        .score-table {
+            width: 60%;
+        }
         table {
             border-collapse: collapse;
-            width: 50%;
-            margin-bottom: 20px;
+            width: 100%;
         }
-
         th, td {
             border: 1px solid #dddddd;
-            text-align: left;
+            text-align: center;
             padding: 8px;
         }
-
         th {
             background-color: #f2f2f2;
         }
-
-        .score {
-            cursor: pointer;
+        .total-row {
+            font-weight: bold;
         }
-
-        #chart-container {
-            width: 50%;
+        canvas {
+            max-width: 100%;
             margin-top: 20px;
         }
     </style>
 </head>
 <body>
-    <div>
-        <input id="new-player-name-input" placeholder="Player Name">
-        <button class="btn btn-primary" onclick="addPlayer()">Add Player</button>
-    </div>
-    <table id="players-table">
-        <thead>
-            <tr>
-                <th>Player Name</th>
-                <th>Score</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Player rows will be dynamically added here -->
-        </tbody>
-    </table>
+    <h1>Golf Score Tracker</h1>
 
-    <div class="form-group">
-        <label for="course-select">Select Course</label>
-        <select class="form-control" id="course-select" onchange="changeCourse(this.value)">
-            <option value="1">Course 1</option>
-            <option value="2">Course 2</option>
-            <option value="3">Course 3</option>
-        </select>
+    <div class="container">
+        <div class="score-info">
+            <h2>Score Information</h2>
+            <label for="tees">Select Tees:</label>
+            <select id="tees" onchange="updateTees(this.value)">
+                <option value="mens">Men's Tees</option>
+                <option value="ladies">Ladies' Tees</option>
+                <option value="seniors">Seniors' Tees</option>
+            </select>
+            <table id="score-info-table">
+                <!-- Score information will be dynamically added here -->
+            </table>
+        </div>
+
+        <div class="score-table">
+            <h2>Score Tracker</h2>
+            <table id="scorecard">
+                <!-- Scorecard table will be dynamically added here -->
+            </table>
+        </div>
     </div>
 
-    <button onclick="saveScores()">Save Scores</button>
-
-    <div id="chart-container">
-        <canvas id="score-chart"></canvas>
-    </div>
+    <canvas id="score-chart"></canvas>
 
     <script>
-        let coursesData = {
-            1: { players: [] },
-            2: { players: [] },
-            3: { players: [] }
-        }; // Object to store data for each course
-        let currentCourseId = 1;
-
-        // Load courses data from local storage when the page loads
-        window.onload = function() {
-            const storedCoursesData = JSON.parse(localStorage.getItem('coursesData'));
-            if (storedCoursesData) {
-                coursesData = storedCoursesData;
-                renderCourseOptions();
-            }
+        let courseData = {
+            tees: {
+                mens: [
+                    { yardage: 350, par: 4 },
+                    { yardage: 410, par: 4 },
+                    { yardage: 180, par: 3 }
+                    // Add more holes as needed
+                ],
+                ladies: [
+                    { yardage: 300, par: 4 },
+                    { yardage: 370, par: 4 },
+                    { yardage: 150, par: 3 }
+                    // Add more holes as needed
+                ],
+                seniors: [
+                    { yardage: 320, par: 4 },
+                    { yardage: 380, par: 4 },
+                    { yardage: 160, par: 3 }
+                    // Add more holes as needed
+                ]
+            },
+            players: [
+                { name: 'Player 1', scores: [] },
+                { name: 'Player 2', scores: [] }
+                // Add more players as needed
+            ],
+            selectedTees: 'mens'
         };
 
-        function addPlayer() {
-            const playerNameInput = document.getElementById('new-player-name-input');
-            const playerName = playerNameInput.value.trim();
-            if (playerName === '') {
-                toastr.error('Please enter a player name.');
-                return;
-            }
-
-            if (!coursesData[currentCourseId]) {
-                coursesData[currentCourseId] = { players: [] };
-            }
-
-            const playerId = coursesData[currentCourseId].players.length + 1; // Generate unique player ID for the current course
-            const player = new Player(playerName, playerId);
-            coursesData[currentCourseId].players.push(player);
-            renderPlayer(player);
-            saveToLocalStorage();
-            updateChart();
-            playerNameInput.value = ''; // Clear input field after adding player
+        function updateTees(selected) {
+            courseData.selectedTees = selected;
+            renderScoreInfo();
         }
 
-        function renderPlayer(player) {
-            const tableBody = document.querySelector('#players-table tbody');
-            const row = document.createElement('tr');
-            row.innerHTML = `
-                <td>${player.name}</td>
-                <td class="score"
-                data-course-id="${currentCourseId}" data-player-id="${player.id}" onclick="editScore(this)">${player.score}</td>
-            `;
-            tableBody.appendChild(row);
+        function renderScoreInfo() {
+            const scoreInfoTable = document.getElementById('score-info-table');
+            scoreInfoTable.innerHTML = ''; // Clear existing rows
+            // Add rows for hole yardage and par
+            courseData.tees[courseData.selectedTees].forEach((hole, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>Hole ${index + 1}</td>
+                    <td>Yardage: ${hole.yardage}</td>
+                    <td>Par: ${hole.par}</td>
+                `;
+                scoreInfoTable.appendChild(row);
+            });
         }
 
-        function editScore(cell) {
-            const courseId = parseInt(cell.getAttribute('data-course-id'));
-            const playerId = parseInt(cell.getAttribute('data-player-id'));
-            const player = coursesData[courseId].players.find(p => p.id === playerId);
-            let newScore = prompt(`Enter new score for ${player.name}:`, player.score);
-            if (newScore !== null) {
-                newScore = parseInt(newScore);
-                if (!isNaN(newScore)) {
-                    player.score = newScore;
-                    cell.textContent = newScore;
-                    saveToLocalStorage();
-                    updateChart();
-                } else {
-                    toastr.error('Please enter a valid score.');
-                }
-            }
-        }
-
-        function saveToLocalStorage() {
-            localStorage.setItem('coursesData', JSON.stringify(coursesData));
-        }
-
-        function saveScores() {
-            saveToLocalStorage();
-            toastr.success('Scores saved successfully!');
-        }
-
-        // Player class definition
-        class Player {
-            constructor(name, id, score = 0) {
-                this.name = name;
-                this.id = id;
-                this.score = score;
-            }
-        }
-
-        function renderCourseOptions() {
-            const courseSelect = document.getElementById('course-select');
-            courseSelect.value = currentCourseId; // Set the default selected course
-        }
-
-        function changeCourse(courseId) {
-            currentCourseId = parseInt(courseId);
-            renderPlayersForCurrentCourse();
-            updateChart();
-        }
-
-        function renderPlayersForCurrentCourse() {
-            const tableBody = document.querySelector('#players-table tbody');
-            tableBody.innerHTML = '';
-            if (currentCourseId && coursesData[currentCourseId]) {
-                coursesData[currentCourseId].players.forEach(player => {
-                    renderPlayer(player);
+        function renderScorecard() {
+            const scorecard = document.getElementById('scorecard');
+            scorecard.innerHTML = ''; // Clear existing rows
+            // Add header row for players
+            const headerRow = document.createElement('tr');
+            headerRow.innerHTML = `<th></th>`;
+            courseData.players.forEach(player => {
+                headerRow.innerHTML += `<th>${player.name}</th>`;
+            });
+            scorecard.appendChild(headerRow);
+            // Add rows for each hole with player scores
+            courseData.tees[courseData.selectedTees].forEach((hole, index) => {
+                const row = document.createElement('tr');
+                row.innerHTML = `<td>Hole ${index + 1}</td>`;
+                courseData.players.forEach(player => {
+                    const score = player.scores[index] || '';
+                    row.innerHTML += `<td contenteditable="true" oninput="updatePlayerScore(${index}, '${player.name}', this)">${score}</td>`;
                 });
+                scorecard.appendChild(row);
+            });
+            // Add total row
+            const totalRow = document.createElement('tr');
+            totalRow.className = 'total-row';
+            totalRow.innerHTML = '<td>Total</td>';
+            courseData.players.forEach(player => {
+                const totalScore = player.scores.reduce((acc, score) => acc + parseInt(score) || 0, 0);
+                totalRow.innerHTML += `<td>${totalScore}</td>`;
+            });
+            scorecard.appendChild(totalRow);
+        }
+
+        function updatePlayerScore(holeIndex, playerName, cell) {
+            const score = parseInt(cell.textContent) || '';
+            const player = courseData.players.find(player => player.name === playerName);
+            if (player) {
+                player.scores[holeIndex] = score;
+                updateTotalRow();
+                updateChart();
             }
+        }
+
+        function updateTotalRow() {
+            const totalRow = document.querySelector('#scorecard .total-row');
+            courseData.players.forEach((player, index) => {
+                const totalScore = player.scores.reduce((acc, score) => acc + parseInt(score) || 0, 0);
+                totalRow.children[index + 1].textContent = totalScore;
+            });
         }
 
         function updateChart() {
-            const playersData = coursesData[currentCourseId]?.players || [];
-            const labels = playersData.map(player => player.name);
-            const scores = playersData.map(player => player.score);
-
+            const labels = courseData.tees[courseData.selectedTees].map((hole, index) => `Hole ${index + 1}`);
+            const datasets = [];
+            courseData.players.forEach(player => {
+                const data = player.scores.map(score => parseInt(score) || null);
+                datasets.push({ label: player.name, data: data });
+            });
             const ctx = document.getElementById('score-chart').getContext('2d');
             const myChart = new Chart(ctx, {
-                type: 'bar',
+                type: 'line',
                 data: {
                     labels: labels,
-                    datasets: [{
-                        label: 'Scores',
-                        data: scores,
-                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                        borderColor: 'rgba(54, 162, 235, 1)',
-                        borderWidth: 1
-                    }]
+                    datasets: datasets
                 },
                 options: {
                     scales: {
@@ -198,6 +196,10 @@
                 }
             });
         }
+
+        renderScoreInfo();
+        renderScorecard();
+        updateChart();
     </script>
 </body>
 </html>
