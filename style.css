@@ -32,3 +32,20 @@ th {
 .total-row {
     font-weight: bold;
 }
+/* Additional CSS for styling */
+h1 {
+    text-align: center;
+    margin-bottom: 20px;
+}
+select {
+    margin-bottom: 10px;
+}
+table th, table td {
+    min-width: 40px;
+}
+.player-name-input {
+    width: 100px;
+}
+.responsive-table {
+    overflow-x: auto;
+}
